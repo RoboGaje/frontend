@@ -26,6 +26,15 @@ const StatsPanel = dynamic(() => import('@/components/StatsPanel'), {
   )
 });
 
+const VideoProcessor = dynamic(() => import('@/components/VideoProcessor'), {
+  ssr: false,
+  loading: () => (
+    <div className="bg-white rounded-lg shadow-lg p-6">
+      <div className="text-gray-400">Loading video processor...</div>
+    </div>
+  )
+});
+
 const AlertSystem = dynamic(() => import('@/components/AlertSystem'), {
   ssr: false
 });
@@ -131,6 +140,9 @@ export default function Home() {
             <StatsPanel />
           </div>
         </div>
+
+        {/* Video Processor */}
+        <VideoProcessor />
 
         {/* Alert System */}
         <AlertSystem />

@@ -50,7 +50,7 @@ const initialState = {
     connectionStatus: { connected: false },
     latestResult: null,
     settings: {
-        face_confidence_threshold: 0.3,
+        face_confidence_threshold: 0.2,
         body_confidence_threshold: 0.5,
         crowd_threshold: parseInt(process.env.NEXT_PUBLIC_CROWD_THRESHOLD || '10'),
     },
