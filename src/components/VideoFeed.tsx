@@ -28,9 +28,15 @@ function VideoFeedComponent() {
         isVideoActive,
         videoError,
         latestResult,
-        targetFps,
+        isProcessing,
         setIsProcessing,
+        targetFps,
+        processAllFrames,
     } = useDetectionStore();
+
+    // Frame processing queue untuk memastikan setiap frame diproses berurutan
+    const frameQueueRef = useRef<Array<{ frameData: string; timestamp: number }>>([]);
+    const isProcessingQueueRef = useRef(false);
 
     // Set client-side flag after component mounts
     useEffect(() => {
@@ -104,40 +110,83 @@ function VideoFeedComponent() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     };
 
-    // Process frame and send to backend
-    const processFrame = () => {
-        if (!isMounted || !isVideoActive) {
-            console.log('⚠️ Cannot process frame: mounted=', isMounted, 'videoActive=', isVideoActive);
+    // Process frame queue sequentially
+    const processFrameQueue = async () => {
+        if (isProcessingQueueRef.current || frameQueueRef.current.length === 0) {
             return;
         }
 
-        // Check WebSocket connection
-        const connected = isConnected();
-        if (!connected) {
-            console.log('⚠️ Cannot process frame: WebSocket not connected');
-            return;
+        isProcessingQueueRef.current = true;
+
+        while (frameQueueRef.current.length > 0) {
+            const frameItem = frameQueueRef.current.shift();
+            if (!frameItem) break;
+
+            try {
+                console.log(`🔄 Processing queued frame (${frameQueueRef.current.length} remaining)`);
+                const success = sendFrame(frameItem.frameData);
+
+                if (!success) {
+                    console.log('❌ Failed to send queued frame');
+                    break; // Stop processing if send fails
+                }
+
+                // Small delay to prevent overwhelming the backend
+                await new Promise(resolve => setTimeout(resolve, 50));
+            } catch (error) {
+                console.error('Error processing queued frame:', error);
+                break;
+            }
         }
 
-        console.log('🎬 Processing frame...');
-        const frameData = captureFrame();
-        if (!frameData) {
-            console.log('❌ Failed to capture frame');
-            return;
-        }
-
-        console.log('📤 Captured frame, size:', frameData.length, 'bytes');
-        setIsProcessing(true);
-
-        const success = sendFrame(frameData);
-        console.log('📡 Frame send result:', success);
-
-        if (!success) {
-            console.log('❌ Failed to send frame');
-            setIsProcessing(false);
-        }
+        isProcessingQueueRef.current = false;
     };
 
-    // Start frame processing interval
+    // Modified processFrame to use queue system
+    const processFrame = () => {
+        if (!videoRef.current || !canvasRef.current || !isMounted) {
+            console.log('❌ Cannot process frame: missing refs or not mounted');
+            return;
+        }
+
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx || video.videoWidth === 0 || video.videoHeight === 0) {
+            console.log('❌ Cannot process frame: invalid video dimensions or context');
+            return;
+        }
+
+        // Set canvas dimensions to match video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        // Draw current frame
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convert to base64
+        const frameData = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+
+        console.log(`📸 Frame captured, adding to queue (mode: ${processAllFrames ? 'SEMUA FRAME' : 'SKIP FRAME'})`);
+
+        // Add frame to queue with timestamp
+        frameQueueRef.current.push({
+            frameData,
+            timestamp: Date.now()
+        });
+
+        // Limit queue size to prevent memory issues (max 10 frames)
+        if (frameQueueRef.current.length > 10) {
+            console.log('⚠️ Frame queue full, removing oldest frame');
+            frameQueueRef.current.shift();
+        }
+
+        // Process queue
+        processFrameQueue();
+    };
+
+    // Start frame processing interval - menggunakan setting processAllFrames
     useEffect(() => {
         if (!isMounted) return;
 
@@ -150,15 +199,25 @@ function VideoFeedComponent() {
             isVideoActive,
             storeConnected,
             socketConnected,
-            targetFps
+            targetFps,
+            processAllFrames
         });
 
         if (isVideoActive && storeConnected && socketConnected) {
-            const interval = 1000 / targetFps; // Convert FPS to milliseconds
-            console.log(`⏰ Starting frame processing interval: ${interval}ms (${targetFps} FPS)`);
+            let interval: number;
+
+            if (processAllFrames) {
+                // Mode semua frame: interval lebih sering
+                interval = Math.max(100, 1000 / targetFps); // Minimum 100ms
+                console.log(`⏰ Starting SEMUA FRAME processing: ${interval}ms (${targetFps} FPS)`);
+            } else {
+                // Mode skip frame: interval lebih jarang
+                interval = Math.max(500, 2000 / targetFps); // Minimum 500ms, lebih jarang
+                console.log(`⏰ Starting SKIP FRAME processing: ${interval}ms (reduced frequency)`);
+            }
 
             frameIntervalRef.current = setInterval(() => {
-                console.log('⏱️ Frame processing interval tick');
+                console.log(`⏱️ Frame processing tick - mode: ${processAllFrames ? 'SEMUA' : 'SKIP'}`);
                 processFrame();
             }, interval);
 
@@ -168,6 +227,9 @@ function VideoFeedComponent() {
                     clearInterval(frameIntervalRef.current);
                     frameIntervalRef.current = null;
                 }
+                // Clear remaining queue
+                frameQueueRef.current = [];
+                isProcessingQueueRef.current = false;
             };
         } else {
             console.log('⏸️ Frame processing paused:', {
@@ -175,8 +237,11 @@ function VideoFeedComponent() {
                 storeConnected,
                 socketConnected
             });
+            // Clear queue when paused
+            frameQueueRef.current = [];
+            isProcessingQueueRef.current = false;
         }
-    }, [isVideoActive, targetFps, isMounted, useDetectionStore.getState().connectionStatus.connected]);
+    }, [isVideoActive, targetFps, processAllFrames, isMounted, useDetectionStore.getState().connectionStatus.connected]);
 
     // Draw detection results
     useEffect(() => {

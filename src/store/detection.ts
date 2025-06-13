@@ -36,6 +36,10 @@ interface DetectionStore {
     targetFps: number;
     setTargetFps: (fps: number) => void;
 
+    // Frame processing mode
+    processAllFrames: boolean;
+    setProcessAllFrames: (processAll: boolean) => void;
+
     // Reset functions
     reset: () => void;
 }
@@ -65,6 +69,7 @@ const initialState = {
     isVideoActive: false,
     videoError: null,
     targetFps: 5,
+    processAllFrames: true, // Default: proses semua frame
 };
 
 export const useDetectionStore = create<DetectionStore>((set, get) => ({
@@ -105,6 +110,8 @@ export const useDetectionStore = create<DetectionStore>((set, get) => ({
     setVideoError: (error) => set({ videoError: error }),
 
     setTargetFps: (fps) => set({ targetFps: fps }),
+
+    setProcessAllFrames: (processAll) => set({ processAllFrames: processAll }),
 
     reset: () => set(initialState),
 })); 

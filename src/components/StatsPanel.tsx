@@ -10,7 +10,12 @@ export default function StatsPanel() {
         connectionStatus,
         settings,
         updateSettings,
-        statistics
+        statistics,
+        isProcessing,
+        targetFps,
+        setTargetFps,
+        processAllFrames,
+        setProcessAllFrames,
     } = useDetectionStore();
 
     const { isConnected, connect, disconnect, sendFrame } = useWebSocket();
@@ -512,68 +517,123 @@ export default function StatsPanel() {
                 </div>
             )}
 
-            {/* Detection Settings */}
+            {/* Settings */}
             <div className="bg-white rounded-lg shadow-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">Detection Settings</h3>
-
-                {/* Face Confidence */}
-                <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                        <label className="text-sm font-medium text-gray-700">
-                            Face Confidence: {settings.face_confidence_threshold}
-                        </label>
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">⚙️ Settings</h3>
+                <div className="space-y-4">
+                    {/* Confidence Thresholds */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Face Confidence
+                            </label>
+                            <input
+                                type="range"
+                                min="0.1"
+                                max="1.0"
+                                step="0.1"
+                                value={settings.face_confidence_threshold}
+                                onChange={(e) => updateSettings({ face_confidence_threshold: parseFloat(e.target.value) })}
+                                className="w-full"
+                            />
+                            <div className="text-xs text-gray-500 text-center">
+                                {settings.face_confidence_threshold}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Body Confidence
+                            </label>
+                            <input
+                                type="range"
+                                min="0.1"
+                                max="1.0"
+                                step="0.1"
+                                value={settings.body_confidence_threshold}
+                                onChange={(e) => updateSettings({ body_confidence_threshold: parseFloat(e.target.value) })}
+                                className="w-full"
+                            />
+                            <div className="text-xs text-gray-500 text-center">
+                                {settings.body_confidence_threshold}
+                            </div>
+                        </div>
                     </div>
-                    <input
-                        type="range"
-                        min="0.1"
-                        max="1.0"
-                        step="0.1"
-                        value={settings.face_confidence_threshold}
-                        onChange={(e) => updateSettings({
-                            face_confidence_threshold: parseFloat(e.target.value)
-                        })}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                    />
-                </div>
 
-                {/* Body Confidence */}
-                <div className="space-y-2 mt-4">
-                    <div className="flex justify-between items-center">
-                        <label className="text-sm font-medium text-gray-700">
-                            Body Confidence: {settings.body_confidence_threshold}
+                    {/* Frame Rate Control */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Target FPS
                         </label>
+                        <input
+                            type="range"
+                            min="1"
+                            max="30"
+                            step="1"
+                            value={targetFps}
+                            onChange={(e) => setTargetFps(parseInt(e.target.value))}
+                            className="w-full"
+                        />
+                        <div className="text-xs text-gray-500 text-center">
+                            {targetFps} FPS
+                        </div>
                     </div>
-                    <input
-                        type="range"
-                        min="0.1"
-                        max="1.0"
-                        step="0.1"
-                        value={settings.body_confidence_threshold}
-                        onChange={(e) => updateSettings({
-                            body_confidence_threshold: parseFloat(e.target.value)
-                        })}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                    />
-                </div>
 
-                {/* Crowd Threshold */}
-                <div className="space-y-2 mt-4">
-                    <div className="flex justify-between items-center">
-                        <label className="text-sm font-medium text-gray-700">
-                            Crowd Alert: {settings.crowd_threshold} people
+                    {/* Processing Mode Control */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <label className="block text-sm font-medium text-blue-800 mb-2">
+                            🎯 Mode Pemrosesan Real-time
                         </label>
+                        <div className="space-y-2">
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="realtime_processing_mode"
+                                    checked={processAllFrames}
+                                    onChange={() => setProcessAllFrames(true)}
+                                    className="text-blue-600"
+                                />
+                                <div className="text-sm">
+                                    <div className="font-medium text-blue-900">🎯 Proses Semua Frame</div>
+                                    <div className="text-xs text-blue-700">Akurasi maksimal - setiap frame diproses</div>
+                                </div>
+                            </label>
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="realtime_processing_mode"
+                                    checked={!processAllFrames}
+                                    onChange={() => setProcessAllFrames(false)}
+                                    className="text-blue-600"
+                                />
+                                <div className="text-sm">
+                                    <div className="font-medium text-blue-900">⚡ Mode Cepat</div>
+                                    <div className="text-xs text-blue-700">Skip beberapa frame untuk performa</div>
+                                </div>
+                            </label>
+                        </div>
+                        <div className="mt-2 text-xs text-blue-600 bg-blue-100 p-2 rounded">
+                            <strong>Status:</strong> {processAllFrames ? 'Semua frame akan diproses berurutan' : 'Frame akan di-skip untuk performa'}
+                        </div>
                     </div>
-                    <input
-                        type="range"
-                        min="1"
-                        max="50"
-                        step="1"
-                        value={settings.crowd_threshold}
-                        onChange={(e) => updateSettings({
-                            crowd_threshold: parseInt(e.target.value)
-                        })}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                    />
+
+                    {/* Crowd Threshold */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Crowd Threshold
+                        </label>
+                        <input
+                            type="range"
+                            min="5"
+                            max="50"
+                            step="5"
+                            value={settings.crowd_threshold}
+                            onChange={(e) => updateSettings({ crowd_threshold: parseInt(e.target.value) })}
+                            className="w-full"
+                        />
+                        <div className="text-xs text-gray-500 text-center">
+                            {settings.crowd_threshold} people
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
