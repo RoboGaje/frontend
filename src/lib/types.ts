@@ -2,6 +2,8 @@ export interface Detection {
     bbox: [number, number, number, number]; // [x1, y1, x2, y2]
     confidence: number;
     type: 'face' | 'body';
+    class_id?: number;
+    class_name?: string;
 }
 
 export interface CrowdAnalysis {
@@ -55,7 +57,8 @@ export interface ConnectionStatus {
 }
 
 export interface DetectionSettings {
-    confidence_threshold: number;
+    face_confidence_threshold: number;
+    body_confidence_threshold: number;
     crowd_threshold: number;
 }
 

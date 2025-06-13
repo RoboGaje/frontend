@@ -40,11 +40,18 @@ interface DetectionStore {
     reset: () => void;
 }
 
+interface DetectionSettings {
+    face_confidence_threshold: number;
+    body_confidence_threshold: number;
+    crowd_threshold: number;
+}
+
 const initialState = {
     connectionStatus: { connected: false },
     latestResult: null,
     settings: {
-        confidence_threshold: 0.5,
+        face_confidence_threshold: 0.3,
+        body_confidence_threshold: 0.5,
         crowd_threshold: parseInt(process.env.NEXT_PUBLIC_CROWD_THRESHOLD || '10'),
     },
     statistics: {

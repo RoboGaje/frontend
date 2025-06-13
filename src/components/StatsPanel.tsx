@@ -191,7 +191,7 @@ export default function StatsPanel() {
                         </button>
                         <button
                             onClick={() => {
-                                console.log('🔍 Testing with low confidence threshold...');
+                                console.log('🔍 Testing with very low face confidence threshold...');
                                 // Get video element and try to capture frame
                                 const videoElements = document.querySelectorAll('video');
                                 if (videoElements.length > 0) {
@@ -213,16 +213,19 @@ export default function StatsPanel() {
                                         const frameData = canvas.toDataURL('image/jpeg', 0.8);
                                         console.log('📸 Manual frame captured, size:', frameData.length);
 
-                                        // Send frame with low confidence threshold
-                                        console.log('📡 Sending frame with LOW confidence threshold (0.1)...');
+                                        // Send frame with very low face confidence threshold
+                                        console.log('📡 Sending frame with VERY LOW face confidence threshold (0.1)...');
 
-                                        // Temporarily update settings to use low confidence
+                                        // Temporarily update settings to use very low face confidence
                                         const originalSettings = { ...settings };
-                                        updateSettings({ confidence_threshold: 0.1 });
+                                        updateSettings({
+                                            face_confidence_threshold: 0.1,  // Very low for face
+                                            body_confidence_threshold: settings.body_confidence_threshold  // Keep body as is
+                                        });
 
                                         // Send frame using the hook
                                         const success = sendFrame(frameData);
-                                        console.log('📡 Low confidence frame send result:', success);
+                                        console.log('📡 Low face confidence frame send result:', success);
 
                                         // Restore original settings after a delay
                                         setTimeout(() => {
@@ -231,9 +234,9 @@ export default function StatsPanel() {
                                         }, 2000);
 
                                         if (success) {
-                                            console.log('✅ Low confidence frame sent successfully!');
+                                            console.log('✅ Low face confidence frame sent successfully!');
                                         } else {
-                                            console.log('❌ Failed to send low confidence frame');
+                                            console.log('❌ Failed to send low face confidence frame');
                                         }
                                     }
                                 } else {
@@ -242,7 +245,7 @@ export default function StatsPanel() {
                             }}
                             className="px-2 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600"
                         >
-                            🔍 Low Conf Test
+                            🔍 Low Face Conf
                         </button>
                     </div>
                 </div>
@@ -338,19 +341,37 @@ export default function StatsPanel() {
                 <h3 className="text-sm font-semibold text-gray-700">Settings</h3>
 
                 <div className="space-y-3">
-                    {/* Confidence Threshold */}
+                    {/* Face Confidence Threshold */}
                     <div>
                         <label className="block text-xs text-gray-600 mb-1">
-                            Confidence Threshold: {settings.confidence_threshold.toFixed(2)}
+                            Face Confidence Threshold: {settings.face_confidence_threshold.toFixed(2)}
                         </label>
                         <input
                             type="range"
                             min="0.1"
                             max="1.0"
                             step="0.05"
-                            value={settings.confidence_threshold}
+                            value={settings.face_confidence_threshold}
                             onChange={(e) => updateSettings({
-                                confidence_threshold: parseFloat(e.target.value)
+                                face_confidence_threshold: parseFloat(e.target.value)
+                            })}
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                        />
+                    </div>
+
+                    {/* Body Confidence Threshold */}
+                    <div>
+                        <label className="block text-xs text-gray-600 mb-1">
+                            Body Confidence Threshold: {settings.body_confidence_threshold.toFixed(2)}
+                        </label>
+                        <input
+                            type="range"
+                            min="0.1"
+                            max="1.0"
+                            step="0.05"
+                            value={settings.body_confidence_threshold}
+                            onChange={(e) => updateSettings({
+                                body_confidence_threshold: parseFloat(e.target.value)
                             })}
                             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                         />

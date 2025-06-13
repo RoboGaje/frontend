@@ -76,8 +76,9 @@ function VideoFeedComponent() {
             // Draw bounding box
             ctx.strokeRect(scaledX1, scaledY1, scaledX2 - scaledX1, scaledY2 - scaledY1);
 
-            // Draw label
-            const label = `${detection.type}: ${(detection.confidence * 100).toFixed(1)}%`;
+            // Draw label with class name if available
+            const baseLabel = detection.class_name || detection.type;
+            const label = `${baseLabel}: ${(detection.confidence * 100).toFixed(1)}%`;
             const textWidth = ctx.measureText(label).width;
 
             // Background for text
