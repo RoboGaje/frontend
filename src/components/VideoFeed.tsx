@@ -44,34 +44,104 @@ function VideoFeedComponent() {
         setIsMounted(true);
     }, []);
 
-    // Draw detection overlays
-    const drawDetections = (detections: Detection[], color: string) => {
+    // Draw detection results
+    useEffect(() => {
         if (!isMounted) return;
+
+        if (latestResult) {
+            console.log('🎨 Drawing detection results:', {
+                faces: latestResult.faces,
+                bodies: latestResult.bodies,
+                facesCount: latestResult.faces?.length || 0,
+                bodiesCount: latestResult.bodies?.length || 0
+            });
+
+            clearOverlay();
+
+            // Draw faces (blue)
+            if (latestResult.faces && latestResult.faces.length > 0) {
+                console.log('🔵 Drawing faces:', latestResult.faces);
+                drawDetections(latestResult.faces, '#3B82F6');
+            }
+
+            // Draw bodies (green)
+            if (latestResult.bodies && latestResult.bodies.length > 0) {
+                console.log('🟢 Drawing bodies:', latestResult.bodies);
+                drawDetections(latestResult.bodies, '#10B981');
+            }
+
+            setIsProcessing(false);
+        } else {
+            console.log('⚠️ No latestResult available for drawing');
+        }
+    }, [latestResult, isMounted]);
+
+    // Draw detection overlays - improved version
+    const drawDetections = (detections: Detection[], color: string) => {
+        if (!isMounted) {
+            console.log('❌ Not mounted, skipping draw');
+            return;
+        }
 
         const canvas = overlayCanvasRef.current;
         const video = videoRef.current;
 
-        if (!canvas || !video) return;
+        if (!canvas || !video) {
+            console.log('❌ Missing canvas or video element');
+            return;
+        }
 
         const ctx = canvas.getContext('2d');
-        if (!ctx) return;
+        if (!ctx) {
+            console.log('❌ Cannot get canvas context');
+            return;
+        }
 
         // Set canvas size to match video display size
         const rect = video.getBoundingClientRect();
         canvas.width = rect.width;
         canvas.height = rect.height;
 
+        console.log('🎨 Canvas setup:', {
+            canvasSize: { width: canvas.width, height: canvas.height },
+            videoSize: { width: video.videoWidth, height: video.videoHeight },
+            displaySize: { width: rect.width, height: rect.height },
+            detectionsCount: detections.length
+        });
+
         // Calculate scale factors
         const scaleX = rect.width / video.videoWidth;
         const scaleY = rect.height / video.videoHeight;
 
+        console.log('📏 Scale factors:', { scaleX, scaleY });
+
         ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
-        ctx.font = '12px Arial';
+        ctx.lineWidth = 3; // Make lines thicker for visibility
+        ctx.font = '14px Arial';
         ctx.fillStyle = color;
 
-        detections.forEach((detection) => {
-            const [x1, y1, x2, y2] = detection.bbox;
+        detections.forEach((detection, index) => {
+            console.log(`🎯 Drawing detection ${index}:`, detection);
+
+            // Handle different bbox formats
+            let bbox;
+            if (Array.isArray(detection.bbox)) {
+                bbox = detection.bbox;
+            } else if (detection.bbox && typeof detection.bbox === 'object') {
+                // Handle object format like {x1, y1, x2, y2}
+                bbox = [detection.bbox.x1, detection.bbox.y1, detection.bbox.x2, detection.bbox.y2];
+            } else {
+                console.log('❌ Invalid bbox format:', detection.bbox);
+                return;
+            }
+
+            const [x1, y1, x2, y2] = bbox;
+
+            // Validate coordinates
+            if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+                console.log('❌ Invalid coordinates:', { x1, y1, x2, y2 });
+                return;
+            }
 
             // Scale coordinates to display size
             const scaledX1 = x1 * scaleX;
@@ -79,22 +149,36 @@ function VideoFeedComponent() {
             const scaledX2 = x2 * scaleX;
             const scaledY2 = y2 * scaleY;
 
+            const width = scaledX2 - scaledX1;
+            const height = scaledY2 - scaledY1;
+
+            console.log(`📦 Bounding box ${index}:`, {
+                original: { x1, y1, x2, y2 },
+                scaled: { x1: scaledX1, y1: scaledY1, x2: scaledX2, y2: scaledY2 },
+                dimensions: { width, height }
+            });
+
             // Draw bounding box
-            ctx.strokeRect(scaledX1, scaledY1, scaledX2 - scaledX1, scaledY2 - scaledY1);
+            ctx.strokeRect(scaledX1, scaledY1, width, height);
 
             // Draw label with class name if available
-            const baseLabel = detection.class_name || detection.type;
-            const label = `${baseLabel}: ${(detection.confidence * 100).toFixed(1)}%`;
+            const baseLabel = detection.class_name || detection.class || detection.type || 'Detection';
+            const confidence = detection.confidence || 0;
+            const label = `${baseLabel}: ${(confidence * 100).toFixed(1)}%`;
             const textWidth = ctx.measureText(label).width;
 
             // Background for text
             ctx.fillStyle = color;
-            ctx.fillRect(scaledX1, scaledY1 - 20, textWidth + 8, 16);
+            ctx.fillRect(scaledX1, scaledY1 - 25, textWidth + 8, 20);
 
             // Text
             ctx.fillStyle = 'white';
-            ctx.fillText(label, scaledX1 + 4, scaledY1 - 6);
+            ctx.fillText(label, scaledX1 + 4, scaledY1 - 8);
+
+            console.log(`✅ Drew detection ${index} with label: ${label}`);
         });
+
+        console.log(`🎨 Finished drawing ${detections.length} detections`);
     };
 
     // Clear overlay canvas
@@ -242,27 +326,6 @@ function VideoFeedComponent() {
             isProcessingQueueRef.current = false;
         }
     }, [isVideoActive, targetFps, processAllFrames, isMounted, useDetectionStore.getState().connectionStatus.connected]);
-
-    // Draw detection results
-    useEffect(() => {
-        if (!isMounted) return;
-
-        if (latestResult) {
-            clearOverlay();
-
-            // Draw faces (blue)
-            if (latestResult.faces.length > 0) {
-                drawDetections(latestResult.faces, '#3B82F6');
-            }
-
-            // Draw bodies (green)
-            if (latestResult.bodies.length > 0) {
-                drawDetections(latestResult.bodies, '#10B981');
-            }
-
-            setIsProcessing(false);
-        }
-    }, [latestResult, isMounted]);
 
     // Handle video resize
     useEffect(() => {

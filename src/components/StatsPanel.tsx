@@ -3,6 +3,7 @@
 import { useDetectionStore } from '@/store/detection';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { DensityInfo, FrameStatistics } from '@/lib/types';
+import React from 'react';
 
 export default function StatsPanel() {
     const {
@@ -25,6 +26,20 @@ export default function StatsPanel() {
     const bodies = latestResult?.bodies || [];
     const densityInfo = (latestResult?.density_info || {}) as DensityInfo;
     const frameStatistics = (latestResult?.statistics || {}) as FrameStatistics;
+
+    // Debug logging untuk melihat struktur data
+    React.useEffect(() => {
+        if (latestResult) {
+            console.log('🔍 StatsPanel - Latest Result:', {
+                faces: latestResult.faces,
+                bodies: latestResult.bodies,
+                facesStructure: latestResult.faces?.[0],
+                bodiesStructure: latestResult.bodies?.[0],
+                densityInfo: latestResult.density_info,
+                timestamp: latestResult.timestamp
+            });
+        }
+    }, [latestResult]);
 
     // Calculate face class distribution for display with proper typing
     const faceClassDist = densityInfo.face_class_distribution || {};
@@ -281,6 +296,74 @@ export default function StatsPanel() {
                             className="px-2 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600"
                         >
                             🔍 Low Face Conf
+                        </button>
+                        <button
+                            onClick={() => {
+                                console.log('🧪 Testing bounding box rendering with dummy data...');
+
+                                // Create dummy detection result
+                                const dummyResult = {
+                                    faces: [
+                                        {
+                                            bbox: [100, 100, 200, 200] as [number, number, number, number],
+                                            confidence: 0.95,
+                                            type: 'face' as const,
+                                            class_name: 'test_face'
+                                        }
+                                    ],
+                                    bodies: [
+                                        {
+                                            bbox: [80, 80, 250, 300] as [number, number, number, number],
+                                            confidence: 0.85,
+                                            type: 'body' as const,
+                                            class_name: 'person'
+                                        }
+                                    ],
+                                    crowd_analysis: {
+                                        face_count: 1,
+                                        body_count: 1,
+                                        total_people: 1,
+                                        crowd_level: 'low' as const,
+                                        density_score: 0.2,
+                                        color: '#10B981',
+                                        face_to_body_ratio: 1.0,
+                                        should_alert: false,
+                                        level_info: {
+                                            min: 1,
+                                            max: 2,
+                                            description: 'Test'
+                                        }
+                                    },
+                                    density_info: {
+                                        people_count: 1,
+                                        face_count: 1,
+                                        people_density: 3.25,
+                                        crowd_level: 'Low' as const,
+                                        crowd_intensity: 25,
+                                        face_body_ratio: 1.0,
+                                        area_coverage: 60.24,
+                                        face_class_distribution: { 'test_face': 1 }
+                                    },
+                                    alerts: [],
+                                    processing_time: 0.1,
+                                    timestamp: Date.now(),
+                                    frame_info: {
+                                        width: 640,
+                                        height: 480,
+                                        channels: 3
+                                    }
+                                };
+
+                                console.log('🎯 Setting dummy detection result:', dummyResult);
+
+                                // Update store with dummy data
+                                useDetectionStore.getState().setLatestResult(dummyResult);
+
+                                console.log('✅ Dummy detection result set! Check if bounding boxes appear.');
+                            }}
+                            className="px-2 py-1 bg-pink-500 text-white text-xs rounded hover:bg-pink-600"
+                        >
+                            🧪 Test Bbox
                         </button>
                     </div>
                 </div>
