@@ -16,7 +16,6 @@ export default function VideoProcessor() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [processedVideoUrl, setProcessedVideoUrl] = useState<string | null>(null);
     const [processingStats, setProcessingStats] = useState<ProcessingStats | null>(null);
-    const [uploadProgress, setUploadProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -49,20 +48,12 @@ export default function VideoProcessor() {
 
         setIsProcessing(true);
         setError(null);
-        setUploadProgress(0);
 
         try {
             const formData = new FormData();
             formData.append('video_file', selectedFile);
             formData.append('face_confidence', settings.face_confidence_threshold.toString());
             formData.append('body_confidence', settings.body_confidence_threshold.toString());
-
-            console.log('📤 Uploading video for processing...', {
-                filename: selectedFile.name,
-                size: selectedFile.size,
-                face_confidence: settings.face_confidence_threshold,
-                body_confidence: settings.body_confidence_threshold
-            });
 
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/process-video`, {
                 method: 'POST',
@@ -81,7 +72,7 @@ export default function VideoProcessor() {
                     const stats = JSON.parse(statsHeader.replace(/'/g, '"'));
                     setProcessingStats(stats);
                 } catch (e) {
-                    console.warn('Failed to parse processing stats:', e);
+                    console.warn('Failed to parse processing stats');
                 }
             }
 
@@ -90,17 +81,10 @@ export default function VideoProcessor() {
             const videoUrl = URL.createObjectURL(blob);
             setProcessedVideoUrl(videoUrl);
 
-            console.log('✅ Video processing completed!', {
-                stats: processingStats,
-                videoSize: blob.size
-            });
-
         } catch (error) {
-            console.error('❌ Video processing error:', error);
             setError(error instanceof Error ? error.message : 'Processing failed');
         } finally {
             setIsProcessing(false);
-            setUploadProgress(0);
         }
     };
 
@@ -120,7 +104,6 @@ export default function VideoProcessor() {
         setProcessedVideoUrl(null);
         setProcessingStats(null);
         setError(null);
-        setUploadProgress(0);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -216,8 +199,8 @@ export default function VideoProcessor() {
                         onClick={processVideo}
                         disabled={isProcessing}
                         className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors ${isProcessing
-                                ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
-                                : 'bg-green-600 text-white hover:bg-green-700'
+                            ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                            : 'bg-green-600 text-white hover:bg-green-700'
                             }`}
                     >
                         {isProcessing ? (
