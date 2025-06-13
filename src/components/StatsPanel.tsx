@@ -189,6 +189,61 @@ export default function StatsPanel() {
                         >
                             🚀 Auto Process
                         </button>
+                        <button
+                            onClick={() => {
+                                console.log('🔍 Testing with low confidence threshold...');
+                                // Get video element and try to capture frame
+                                const videoElements = document.querySelectorAll('video');
+                                if (videoElements.length > 0) {
+                                    const video = videoElements[0] as HTMLVideoElement;
+                                    console.log('📹 Video found:', {
+                                        readyState: video.readyState,
+                                        videoWidth: video.videoWidth,
+                                        videoHeight: video.videoHeight,
+                                        currentTime: video.currentTime
+                                    });
+
+                                    // Try to capture frame manually
+                                    const canvas = document.createElement('canvas');
+                                    canvas.width = video.videoWidth;
+                                    canvas.height = video.videoHeight;
+                                    const ctx = canvas.getContext('2d');
+                                    if (ctx) {
+                                        ctx.drawImage(video, 0, 0);
+                                        const frameData = canvas.toDataURL('image/jpeg', 0.8);
+                                        console.log('📸 Manual frame captured, size:', frameData.length);
+
+                                        // Send frame with low confidence threshold
+                                        console.log('📡 Sending frame with LOW confidence threshold (0.1)...');
+
+                                        // Temporarily update settings to use low confidence
+                                        const originalSettings = { ...settings };
+                                        updateSettings({ confidence_threshold: 0.1 });
+
+                                        // Send frame using the hook
+                                        const success = sendFrame(frameData);
+                                        console.log('📡 Low confidence frame send result:', success);
+
+                                        // Restore original settings after a delay
+                                        setTimeout(() => {
+                                            updateSettings(originalSettings);
+                                            console.log('⚙️ Settings restored to original values');
+                                        }, 2000);
+
+                                        if (success) {
+                                            console.log('✅ Low confidence frame sent successfully!');
+                                        } else {
+                                            console.log('❌ Failed to send low confidence frame');
+                                        }
+                                    }
+                                } else {
+                                    console.log('❌ No video element found');
+                                }
+                            }}
+                            className="px-2 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600"
+                        >
+                            🔍 Low Conf Test
+                        </button>
                     </div>
                 </div>
             </div>
