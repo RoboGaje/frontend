@@ -15,7 +15,7 @@ export default function StatsPanel() {
         updateSettings,
     } = useDetectionStore();
 
-    const { isConnected } = useWebSocket();
+    const { isConnected, connect } = useWebSocket();
 
     const crowdLevel = latestResult?.crowd_analysis?.crowd_level || 'empty';
     const crowdColor = latestResult?.crowd_analysis?.color || '#6B7280';
@@ -76,6 +76,31 @@ export default function StatsPanel() {
                     <div>Store Connected: {connectionStatus.connected ? '✅' : '❌'}</div>
                     <div>Socket Connected: {isConnected() ? '✅' : '❌'}</div>
                     <div>WebSocket URL: {process.env.NEXT_PUBLIC_WS_URL}</div>
+
+                    {/* Manual Connection Test */}
+                    <div className="mt-2 flex gap-2">
+                        <button
+                            onClick={() => {
+                                console.log('🔄 Manual WebSocket connection test...');
+                                connect();
+                            }}
+                            className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                        >
+                            🔄 Test Connect
+                        </button>
+                        <button
+                            onClick={() => {
+                                console.log('🧪 Testing backend API...');
+                                fetch(process.env.NEXT_PUBLIC_BACKEND_URL + '/api/models/info')
+                                    .then(res => res.json())
+                                    .then(data => console.log('✅ Backend API response:', data))
+                                    .catch(err => console.error('❌ Backend API error:', err));
+                            }}
+                            className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600"
+                        >
+                            🧪 Test API
+                        </button>
+                    </div>
                 </div>
             </div>
 

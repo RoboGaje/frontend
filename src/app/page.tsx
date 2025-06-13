@@ -38,9 +38,17 @@ export default function Home() {
   // Auto-connect to WebSocket on mount
   useEffect(() => {
     if (isMounted) {
-      connect();
+      console.log('🚀 Page mounted, attempting WebSocket connection...');
+
+      // Small delay to ensure everything is ready
+      const timer = setTimeout(() => {
+        console.log('⏰ Connecting to WebSocket after delay...');
+        connect();
+      }, 1000);
 
       return () => {
+        clearTimeout(timer);
+        console.log('🧹 Page unmounting, disconnecting WebSocket...');
         disconnect();
       };
     }
