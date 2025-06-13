@@ -5,24 +5,29 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 
 export default function StatsPanel() {
     const {
-        detectionResults,
+        latestResult,
         connectionStatus,
         settings,
-        updateSettings
+        updateSettings,
+        statistics
     } = useDetectionStore();
 
-    const { isConnecting } = useWebSocket();
+    const { isConnected } = useWebSocket();
 
-    // Get latest detection result
-    const latestResult = detectionResults[detectionResults.length - 1];
+    // Get detection data from latest result
     const faces = latestResult?.faces || [];
     const bodies = latestResult?.bodies || [];
     const densityInfo = latestResult?.density_info || {};
-    const statistics = latestResult?.statistics || {};
+    const frameStatistics = latestResult?.statistics || {};
 
-    // Calculate face class distribution for display
+    // Calculate face class distribution for display with proper typing
     const faceClassDist = densityInfo.face_class_distribution || {};
-    const totalFacesInFrame = Object.values(faceClassDist).reduce((sum: number, count: number) => sum + count, 0);
+    const totalFacesInFrame = Object.values(faceClassDist).reduce((sum: number, count: unknown) => {
+        return sum + (typeof count === 'number' ? count : 0);
+    }, 0);
+
+    // Check if we're connecting (when not connected but no error)
+    const isConnecting = !connectionStatus.connected && !connectionStatus.error;
 
     return (
         <div className="space-y-4">
@@ -30,10 +35,8 @@ export default function StatsPanel() {
             <div className="bg-white rounded-lg shadow-lg p-4">
                 <h3 className="text-lg font-semibold text-gray-800 mb-3">Connection Status</h3>
                 <div className="space-y-2">
-                    <div className={`flex items-center gap-2 ${connectionStatus.connected ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                        <div className={`w-3 h-3 rounded-full ${connectionStatus.connected ? 'bg-green-500' : 'bg-red-500'
-                            }`} />
+                    <div className={`flex items-center gap-2 ${connectionStatus.connected ? 'text-green-600' : 'text-red-600'}`}>
+                        <div className={`w-3 h-3 rounded-full ${connectionStatus.connected ? 'bg-green-500' : 'bg-red-500'}`} />
                         <span className="font-medium">
                             {isConnecting ? 'Connecting...' :
                                 connectionStatus.connected ? 'Connected' : 'Disconnected'}
@@ -62,10 +65,10 @@ export default function StatsPanel() {
                     <div>
                         <span className="text-gray-600">Crowd Level:</span>
                         <span className={`ml-2 font-bold ${densityInfo.crowd_level === 'Empty' ? 'text-gray-500' :
-                                densityInfo.crowd_level === 'Low' ? 'text-green-500' :
-                                    densityInfo.crowd_level === 'Medium' ? 'text-yellow-500' :
-                                        densityInfo.crowd_level === 'High' ? 'text-orange-500' :
-                                            'text-red-500'
+                            densityInfo.crowd_level === 'Low' ? 'text-green-500' :
+                                densityInfo.crowd_level === 'Medium' ? 'text-yellow-500' :
+                                    densityInfo.crowd_level === 'High' ? 'text-orange-500' :
+                                        'text-red-500'
                             }`}>
                             {densityInfo.crowd_level || 'Unknown'}
                         </span>
@@ -86,7 +89,9 @@ export default function StatsPanel() {
                             {Object.entries(faceClassDist).map(([className, count]) => (
                                 <div key={className} className="flex justify-between text-xs">
                                     <span className="text-gray-600 capitalize">{className}:</span>
-                                    <span className="font-medium text-blue-600">{count}</span>
+                                    <span className="font-medium text-blue-600">
+                                        {typeof count === 'number' ? count : 0}
+                                    </span>
                                 </div>
                             ))}
                         </div>
@@ -120,63 +125,63 @@ export default function StatsPanel() {
             </div>
 
             {/* Session Statistics */}
-            {statistics.total_frames > 0 && (
+            {frameStatistics && frameStatistics.total_frames > 0 && (
                 <div className="bg-white rounded-lg shadow-lg p-4">
                     <h3 className="text-lg font-semibold text-gray-800 mb-3">Session Statistics</h3>
                     <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                             <span className="text-gray-600">Total Frames:</span>
-                            <span className="font-medium">{statistics.total_frames}</span>
+                            <span className="font-medium">{frameStatistics.total_frames}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Total Faces:</span>
-                            <span className="font-medium text-blue-600">{statistics.total_faces}</span>
+                            <span className="font-medium text-blue-600">{frameStatistics.total_faces}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Total Bodies:</span>
-                            <span className="font-medium text-green-600">{statistics.total_bodies}</span>
+                            <span className="font-medium text-green-600">{frameStatistics.total_bodies}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Avg Faces/Frame:</span>
-                            <span className="font-medium">{statistics.avg_faces_per_frame}</span>
+                            <span className="font-medium">{frameStatistics.avg_faces_per_frame}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Avg Bodies/Frame:</span>
-                            <span className="font-medium">{statistics.avg_bodies_per_frame}</span>
+                            <span className="font-medium">{frameStatistics.avg_bodies_per_frame}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Max Faces:</span>
-                            <span className="font-medium">{statistics.max_faces_in_frame}</span>
+                            <span className="font-medium">{frameStatistics.max_faces_in_frame}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Max Bodies:</span>
-                            <span className="font-medium">{statistics.max_bodies_in_frame}</span>
+                            <span className="font-medium">{frameStatistics.max_bodies_in_frame}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Avg Processing:</span>
-                            <span className="font-medium">{statistics.avg_processing_time}s</span>
+                            <span className="font-medium">{frameStatistics.avg_processing_time}s</span>
                         </div>
                     </div>
 
                     {/* Confidence Statistics */}
-                    {(statistics.face_confidence_stats?.avg || statistics.body_confidence_stats?.avg) && (
+                    {(frameStatistics.face_confidence_stats?.avg || frameStatistics.body_confidence_stats?.avg) && (
                         <div className="mt-3 pt-3 border-t border-gray-200">
                             <div className="text-sm font-medium text-gray-700 mb-2">Confidence Stats:</div>
-                            {statistics.face_confidence_stats?.avg && (
+                            {frameStatistics.face_confidence_stats?.avg && (
                                 <div className="text-xs space-y-1">
                                     <div className="text-gray-600">Face Confidence:</div>
                                     <div className="flex justify-between">
-                                        <span>Avg: {statistics.face_confidence_stats.avg}</span>
-                                        <span>Range: {statistics.face_confidence_stats.min}-{statistics.face_confidence_stats.max}</span>
+                                        <span>Avg: {frameStatistics.face_confidence_stats.avg}</span>
+                                        <span>Range: {frameStatistics.face_confidence_stats.min}-{frameStatistics.face_confidence_stats.max}</span>
                                     </div>
                                 </div>
                             )}
-                            {statistics.body_confidence_stats?.avg && (
+                            {frameStatistics.body_confidence_stats?.avg && (
                                 <div className="text-xs space-y-1 mt-2">
                                     <div className="text-gray-600">Body Confidence:</div>
                                     <div className="flex justify-between">
-                                        <span>Avg: {statistics.body_confidence_stats.avg}</span>
-                                        <span>Range: {statistics.body_confidence_stats.min}-{statistics.body_confidence_stats.max}</span>
+                                        <span>Avg: {frameStatistics.body_confidence_stats.avg}</span>
+                                        <span>Range: {frameStatistics.body_confidence_stats.min}-{frameStatistics.body_confidence_stats.max}</span>
                                     </div>
                                 </div>
                             )}
@@ -184,19 +189,38 @@ export default function StatsPanel() {
                     )}
 
                     {/* Face Class Distribution (Overall) */}
-                    {statistics.face_class_distribution && Object.keys(statistics.face_class_distribution).length > 0 && (
+                    {frameStatistics.face_class_distribution && Object.keys(frameStatistics.face_class_distribution).length > 0 && (
                         <div className="mt-3 pt-3 border-t border-gray-200">
                             <div className="text-sm font-medium text-gray-700 mb-2">Overall Face Distribution:</div>
                             <div className="space-y-1">
-                                {Object.entries(statistics.face_class_distribution).map(([className, count]) => (
+                                {Object.entries(frameStatistics.face_class_distribution).map(([className, count]) => (
                                     <div key={className} className="flex justify-between text-xs">
                                         <span className="text-gray-600 capitalize">{className}:</span>
-                                        <span className="font-medium text-blue-600">{count}</span>
+                                        <span className="font-medium text-blue-600">
+                                            {typeof count === 'number' ? count : 0}
+                                        </span>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* Basic Statistics (fallback) */}
+            {(!frameStatistics || !frameStatistics.total_frames) && statistics.frames_processed > 0 && (
+                <div className="bg-white rounded-lg shadow-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-3">Basic Statistics</h3>
+                    <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Frames Processed:</span>
+                            <span className="font-medium">{statistics.frames_processed}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Average Latency:</span>
+                            <span className="font-medium">{statistics.processing_latency.toFixed(3)}s</span>
+                        </div>
+                    </div>
                 </div>
             )}
 

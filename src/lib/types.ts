@@ -22,6 +22,38 @@ export interface CrowdAnalysis {
     };
 }
 
+export interface DensityInfo {
+    people_count: number;
+    face_count: number;
+    people_density: number;
+    crowd_level: 'Empty' | 'Low' | 'Medium' | 'High' | 'Very High';
+    crowd_intensity: number;
+    face_body_ratio: number;
+    area_coverage: number;
+    face_class_distribution: Record<string, number>;
+}
+
+export interface ConfidenceStats {
+    avg: number;
+    min: number;
+    max: number;
+}
+
+export interface FrameStatistics {
+    total_frames: number;
+    total_faces: number;
+    total_bodies: number;
+    avg_faces_per_frame: number;
+    avg_bodies_per_frame: number;
+    max_faces_in_frame: number;
+    max_bodies_in_frame: number;
+    avg_processing_time: number;
+    face_class_distribution: Record<string, number>;
+    face_confidence_stats?: ConfidenceStats;
+    body_confidence_stats?: ConfidenceStats;
+    recent_crowd_level_distribution: Record<string, number>;
+}
+
 export interface Alert {
     type: string;
     level: 'info' | 'warning' | 'error' | 'critical';
@@ -34,6 +66,8 @@ export interface DetectionResult {
     faces: Detection[];
     bodies: Detection[];
     crowd_analysis: CrowdAnalysis;
+    density_info?: DensityInfo;
+    statistics?: FrameStatistics;
     alerts: Alert[];
     processing_time: number;
     timestamp: number;
