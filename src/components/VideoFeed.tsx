@@ -105,19 +105,33 @@ function VideoFeedComponent() {
 
     // Process frame and send to backend
     const processFrame = () => {
-        if (!isMounted || !isConnected() || !isVideoActive) {
+        if (!isMounted || !isVideoActive) {
+            console.log('⚠️ Cannot process frame: mounted=', isMounted, 'videoActive=', isVideoActive);
             return;
         }
 
+        // Check WebSocket connection
+        const connected = isConnected();
+        if (!connected) {
+            console.log('⚠️ Cannot process frame: WebSocket not connected');
+            return;
+        }
+
+        console.log('🎬 Processing frame...');
         const frameData = captureFrame();
         if (!frameData) {
+            console.log('❌ Failed to capture frame');
             return;
         }
 
+        console.log('📤 Captured frame, size:', frameData.length, 'bytes');
         setIsProcessing(true);
+
         const success = sendFrame(frameData);
+        console.log('📡 Frame send result:', success);
 
         if (!success) {
+            console.log('❌ Failed to send frame');
             setIsProcessing(false);
         }
     };
@@ -126,17 +140,33 @@ function VideoFeedComponent() {
     useEffect(() => {
         if (!isMounted) return;
 
+        console.log('🔄 Frame processing effect triggered:', {
+            isVideoActive,
+            isConnected: isConnected(),
+            targetFps
+        });
+
         if (isVideoActive && isConnected()) {
             const interval = 1000 / targetFps; // Convert FPS to milliseconds
+            console.log(`⏰ Starting frame processing interval: ${interval}ms (${targetFps} FPS)`);
 
-            frameIntervalRef.current = setInterval(processFrame, interval);
+            frameIntervalRef.current = setInterval(() => {
+                console.log('⏱️ Frame processing interval tick');
+                processFrame();
+            }, interval);
 
             return () => {
                 if (frameIntervalRef.current) {
+                    console.log('🛑 Clearing frame processing interval');
                     clearInterval(frameIntervalRef.current);
                     frameIntervalRef.current = null;
                 }
             };
+        } else {
+            console.log('⏸️ Frame processing paused:', {
+                videoActive: isVideoActive,
+                connected: isConnected()
+            });
         }
     }, [isVideoActive, isConnected, targetFps, isMounted]);
 
@@ -236,11 +266,11 @@ function VideoFeedComponent() {
                 {/* Status Indicators */}
                 <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
                     {/* Connection Status */}
-                    <div className={`px-3 py-1 rounded-full text-sm font-medium shadow-lg ${isConnected()
+                    <div className={`px-3 py-1 rounded-full text-sm font-medium shadow-lg ${useDetectionStore.getState().connectionStatus.connected
                         ? 'bg-green-600 text-white'
                         : 'bg-red-600 text-white'
                         }`}>
-                        {isConnected() ? '🟢 Connected' : '🔴 Disconnected'}
+                        {useDetectionStore.getState().connectionStatus.connected ? '🟢 Connected' : '🔴 Disconnected'}
                     </div>
 
                     {/* Processing Status */}

@@ -76,9 +76,11 @@ export default function StatsPanel() {
                     <div>Store Connected: {connectionStatus.connected ? '✅' : '❌'}</div>
                     <div>Socket Connected: {isConnected() ? '✅' : '❌'}</div>
                     <div>WebSocket URL: {process.env.NEXT_PUBLIC_WS_URL}</div>
+                    <div>Backend URL: {process.env.NEXT_PUBLIC_BACKEND_URL}</div>
+                    <div>Current Host: {typeof window !== 'undefined' ? window.location.host : 'unknown'}</div>
 
                     {/* Manual Connection Test */}
-                    <div className="mt-2 flex gap-2">
+                    <div className="mt-2 flex gap-2 flex-wrap">
                         <button
                             onClick={() => {
                                 console.log('🔄 Manual WebSocket connection test...');
@@ -99,6 +101,51 @@ export default function StatsPanel() {
                             className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600"
                         >
                             🧪 Test API
+                        </button>
+                        <button
+                            onClick={() => {
+                                console.log('🔄 Force refresh page...');
+                                window.location.reload();
+                            }}
+                            className="px-2 py-1 bg-orange-500 text-white text-xs rounded hover:bg-orange-600"
+                        >
+                            🔄 Refresh
+                        </button>
+                        <button
+                            onClick={() => {
+                                console.log('🎬 Manual frame processing test...');
+                                // Get video element and try to capture frame
+                                const videoElements = document.querySelectorAll('video');
+                                if (videoElements.length > 0) {
+                                    const video = videoElements[0] as HTMLVideoElement;
+                                    console.log('📹 Video found:', {
+                                        readyState: video.readyState,
+                                        videoWidth: video.videoWidth,
+                                        videoHeight: video.videoHeight,
+                                        currentTime: video.currentTime
+                                    });
+
+                                    // Try to capture frame manually
+                                    const canvas = document.createElement('canvas');
+                                    canvas.width = video.videoWidth;
+                                    canvas.height = video.videoHeight;
+                                    const ctx = canvas.getContext('2d');
+                                    if (ctx) {
+                                        ctx.drawImage(video, 0, 0);
+                                        const frameData = canvas.toDataURL('image/jpeg', 0.8);
+                                        console.log('📸 Manual frame captured, size:', frameData.length);
+
+                                        // Try to send via WebSocket
+                                        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws';
+                                        console.log('📡 Attempting manual frame send to:', wsUrl);
+                                    }
+                                } else {
+                                    console.log('❌ No video element found');
+                                }
+                            }}
+                            className="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600"
+                        >
+                            🎬 Test Frame
                         </button>
                     </div>
                 </div>
