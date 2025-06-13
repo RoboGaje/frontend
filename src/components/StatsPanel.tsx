@@ -2,6 +2,7 @@
 
 import { useDetectionStore } from '@/store/detection';
 import { useWebSocket } from '@/hooks/useWebSocket';
+import { DensityInfo, FrameStatistics } from '@/lib/types';
 
 export default function StatsPanel() {
     const {
@@ -12,13 +13,13 @@ export default function StatsPanel() {
         statistics
     } = useDetectionStore();
 
-    const { isConnected } = useWebSocket();
+    const { isConnected, connect, disconnect, sendFrame } = useWebSocket();
 
-    // Get detection data from latest result
+    // Get detection data from latest result with proper typing
     const faces = latestResult?.faces || [];
     const bodies = latestResult?.bodies || [];
-    const densityInfo = latestResult?.density_info || {};
-    const frameStatistics = latestResult?.statistics || {};
+    const densityInfo = (latestResult?.density_info || {}) as DensityInfo;
+    const frameStatistics = (latestResult?.statistics || {}) as FrameStatistics;
 
     // Calculate face class distribution for display with proper typing
     const faceClassDist = densityInfo.face_class_distribution || {};
@@ -29,8 +30,110 @@ export default function StatsPanel() {
     // Check if we're connecting (when not connected but no error)
     const isConnecting = !connectionStatus.connected && !connectionStatus.error;
 
+    // Test functions
+    const handleTestConnection = () => {
+        if (connectionStatus.connected) {
+            console.log('🔌 Testing disconnect...');
+            disconnect();
+        } else {
+            console.log('🔌 Testing connection...');
+            connect();
+        }
+    };
+
+    const handleTestFrame = () => {
+        if (!connectionStatus.connected) {
+            alert('❌ WebSocket tidak terhubung! Hubungkan dulu sebelum test frame.');
+            return;
+        }
+
+        // Create a simple test frame (1x1 pixel black image in base64)
+        const testFrame = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9jU77yQAAAABJRU5ErkJggg==';
+
+        console.log('🧪 Sending test frame...');
+        const success = sendFrame(testFrame);
+
+        if (success) {
+            alert('✅ Test frame berhasil dikirim! Periksa console untuk response.');
+        } else {
+            alert('❌ Gagal mengirim test frame!');
+        }
+    };
+
+    const handleClearStats = () => {
+        if (confirm('🗑️ Yakin ingin menghapus semua statistik?')) {
+            // Reset statistics in store
+            useDetectionStore.getState().reset();
+            console.log('🧹 Statistics cleared');
+            alert('✅ Statistik berhasil dihapus!');
+        }
+    };
+
+    const handleExportStats = () => {
+        const exportData = {
+            timestamp: new Date().toISOString(),
+            connectionStatus,
+            latestResult,
+            statistics,
+            settings
+        };
+
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `detection-stats-${Date.now()}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        console.log('📊 Statistics exported');
+        alert('✅ Statistik berhasil diekspor!');
+    };
+
     return (
         <div className="space-y-4">
+            {/* Test Controls */}
+            <div className="bg-white rounded-lg shadow-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Test Controls</h3>
+                <div className="grid grid-cols-2 gap-2">
+                    <button
+                        onClick={handleTestConnection}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${connectionStatus.connected
+                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                            }`}
+                    >
+                        {connectionStatus.connected ? '🔌 Test Disconnect' : '🔌 Test Connect'}
+                    </button>
+
+                    <button
+                        onClick={handleTestFrame}
+                        disabled={!connectionStatus.connected}
+                        className="px-3 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:bg-gray-100 disabled:text-gray-400 rounded-lg text-sm font-medium transition-colors"
+                    >
+                        🧪 Test Frame
+                    </button>
+
+                    <button
+                        onClick={handleClearStats}
+                        className="px-3 py-2 bg-yellow-100 text-yellow-700 hover:bg-yellow-200 rounded-lg text-sm font-medium transition-colors"
+                    >
+                        🗑️ Clear Stats
+                    </button>
+
+                    <button
+                        onClick={handleExportStats}
+                        className="px-3 py-2 bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-lg text-sm font-medium transition-colors"
+                    >
+                        📊 Export Stats
+                    </button>
+                </div>
+            </div>
+
             {/* Connection Status */}
             <div className="bg-white rounded-lg shadow-lg p-4">
                 <h3 className="text-lg font-semibold text-gray-800 mb-3">Connection Status</h3>
@@ -45,6 +148,11 @@ export default function StatsPanel() {
                     {connectionStatus.error && (
                         <div className="text-sm text-red-600">
                             Error: {connectionStatus.error}
+                        </div>
+                    )}
+                    {connectionStatus.client_id && (
+                        <div className="text-xs text-gray-500">
+                            Client ID: {connectionStatus.client_id}
                         </div>
                     )}
                 </div>
