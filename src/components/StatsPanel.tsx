@@ -2,6 +2,7 @@
 
 import { useDetectionStore } from '@/store/detection';
 import { useWebSocket } from '@/hooks/useWebSocket';
+import { useEffect } from 'react';
 
 export default function StatsPanel() {
     const {
@@ -33,6 +34,17 @@ export default function StatsPanel() {
     // Use consistent connection status
     const isActuallyConnected = connectionStatus.connected && isConnected();
 
+    // Debug logging
+    useEffect(() => {
+        console.log('📊 StatsPanel - Connection Status Debug:', {
+            'connectionStatus.connected': connectionStatus.connected,
+            'isConnected()': isConnected(),
+            'isActuallyConnected': isActuallyConnected,
+            'client_id': connectionStatus.client_id,
+            'error': connectionStatus.error
+        });
+    }, [connectionStatus, isConnected, isActuallyConnected]);
+
     return (
         <div className="bg-white rounded-lg shadow-lg p-6 space-y-6">
             <h2 className="text-xl font-bold text-gray-900">Detection Statistics</h2>
@@ -41,10 +53,10 @@ export default function StatsPanel() {
             <div className="space-y-2">
                 <h3 className="text-sm font-semibold text-gray-700">Connection</h3>
                 <div className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${isActuallyConnected ? 'bg-green-500' : 'bg-red-500'
+                    <div className={`w-3 h-3 rounded-full ${connectionStatus.connected ? 'bg-green-500' : 'bg-red-500'
                         }`} />
                     <span className="text-sm">
-                        {isActuallyConnected ? 'Connected' : 'Disconnected'}
+                        {connectionStatus.connected ? 'Connected' : 'Disconnected'}
                     </span>
                     {connectionStatus.client_id && (
                         <span className="text-xs text-gray-500">
@@ -57,6 +69,14 @@ export default function StatsPanel() {
                         {connectionStatus.error}
                     </div>
                 )}
+
+                {/* Debug Info */}
+                <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                    <div>🔍 Debug:</div>
+                    <div>Store Connected: {connectionStatus.connected ? '✅' : '❌'}</div>
+                    <div>Socket Connected: {isConnected() ? '✅' : '❌'}</div>
+                    <div>WebSocket URL: {process.env.NEXT_PUBLIC_WS_URL}</div>
+                </div>
             </div>
 
             {/* Current Detection */}
