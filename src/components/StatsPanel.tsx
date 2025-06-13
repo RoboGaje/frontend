@@ -104,39 +104,6 @@ export default function StatsPanel() {
             {/* Test Controls */}
             <div className="bg-white rounded-lg shadow-lg p-4">
                 <h3 className="text-lg font-semibold text-gray-800 mb-3">Test Controls</h3>
-                <div className="grid grid-cols-2 gap-2">
-                    <button
-                        onClick={handleTestConnection}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${connectionStatus.connected
-                            ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                            : 'bg-green-100 text-green-700 hover:bg-green-200'
-                            }`}
-                    >
-                        {connectionStatus.connected ? '🔌 Test Disconnect' : '🔌 Test Connect'}
-                    </button>
-
-                    <button
-                        onClick={handleTestFrame}
-                        disabled={!connectionStatus.connected}
-                        className="px-3 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:bg-gray-100 disabled:text-gray-400 rounded-lg text-sm font-medium transition-colors"
-                    >
-                        🧪 Test Frame
-                    </button>
-
-                    <button
-                        onClick={handleClearStats}
-                        className="px-3 py-2 bg-yellow-100 text-yellow-700 hover:bg-yellow-200 rounded-lg text-sm font-medium transition-colors"
-                    >
-                        🗑️ Clear Stats
-                    </button>
-
-                    <button
-                        onClick={handleExportStats}
-                        className="px-3 py-2 bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-lg text-sm font-medium transition-colors"
-                    >
-                        📊 Export Stats
-                    </button>
-                </div>
 
                 {/* Debug Info */}
                 <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded mt-3">
