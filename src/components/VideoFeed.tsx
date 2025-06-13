@@ -140,13 +140,19 @@ function VideoFeedComponent() {
     useEffect(() => {
         if (!isMounted) return;
 
+        // Get connection status from store instead of hook
+        const { connectionStatus } = useDetectionStore.getState();
+        const storeConnected = connectionStatus.connected;
+        const socketConnected = isConnected();
+
         console.log('🔄 Frame processing effect triggered:', {
             isVideoActive,
-            isConnected: isConnected(),
+            storeConnected,
+            socketConnected,
             targetFps
         });
 
-        if (isVideoActive && isConnected()) {
+        if (isVideoActive && storeConnected && socketConnected) {
             const interval = 1000 / targetFps; // Convert FPS to milliseconds
             console.log(`⏰ Starting frame processing interval: ${interval}ms (${targetFps} FPS)`);
 
@@ -165,10 +171,11 @@ function VideoFeedComponent() {
         } else {
             console.log('⏸️ Frame processing paused:', {
                 videoActive: isVideoActive,
-                connected: isConnected()
+                storeConnected,
+                socketConnected
             });
         }
-    }, [isVideoActive, isConnected, targetFps, isMounted]);
+    }, [isVideoActive, targetFps, isMounted, useDetectionStore.getState().connectionStatus.connected]);
 
     // Draw detection results
     useEffect(() => {

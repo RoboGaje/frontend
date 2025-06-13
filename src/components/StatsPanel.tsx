@@ -15,7 +15,7 @@ export default function StatsPanel() {
         updateSettings,
     } = useDetectionStore();
 
-    const { isConnected, connect } = useWebSocket();
+    const { isConnected, connect, sendFrame } = useWebSocket();
 
     const crowdLevel = latestResult?.crowd_analysis?.crowd_level || 'empty';
     const crowdColor = latestResult?.crowd_analysis?.color || '#6B7280';
@@ -135,9 +135,16 @@ export default function StatsPanel() {
                                         const frameData = canvas.toDataURL('image/jpeg', 0.8);
                                         console.log('📸 Manual frame captured, size:', frameData.length);
 
-                                        // Try to send via WebSocket
-                                        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws';
-                                        console.log('📡 Attempting manual frame send to:', wsUrl);
+                                        // Send frame via WebSocket using the hook
+                                        console.log('📡 Sending frame via WebSocket...');
+                                        const success = sendFrame(frameData);
+                                        console.log('📡 Frame send result:', success);
+
+                                        if (success) {
+                                            console.log('✅ Frame sent successfully!');
+                                        } else {
+                                            console.log('❌ Failed to send frame');
+                                        }
                                     }
                                 } else {
                                     console.log('❌ No video element found');
@@ -146,6 +153,41 @@ export default function StatsPanel() {
                             className="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600"
                         >
                             🎬 Test Frame
+                        </button>
+                        <button
+                            onClick={() => {
+                                console.log('🚀 Force start frame processing...');
+                                // Trigger frame processing manually
+                                const videoElements = document.querySelectorAll('video');
+                                if (videoElements.length > 0) {
+                                    const video = videoElements[0] as HTMLVideoElement;
+                                    if (video.readyState === 4) { // HAVE_ENOUGH_DATA
+                                        console.log('🎯 Starting continuous frame processing...');
+
+                                        const processInterval = setInterval(() => {
+                                            const canvas = document.createElement('canvas');
+                                            canvas.width = video.videoWidth;
+                                            canvas.height = video.videoHeight;
+                                            const ctx = canvas.getContext('2d');
+                                            if (ctx) {
+                                                ctx.drawImage(video, 0, 0);
+                                                const frameData = canvas.toDataURL('image/jpeg', 0.8);
+                                                const success = sendFrame(frameData);
+                                                console.log('🔄 Auto frame sent:', success);
+                                            }
+                                        }, 1000); // 1 FPS for testing
+
+                                        // Stop after 10 seconds
+                                        setTimeout(() => {
+                                            clearInterval(processInterval);
+                                            console.log('⏹️ Stopped auto frame processing');
+                                        }, 10000);
+                                    }
+                                }
+                            }}
+                            className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+                        >
+                            🚀 Auto Process
                         </button>
                     </div>
                 </div>
