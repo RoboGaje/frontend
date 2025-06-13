@@ -26,6 +26,13 @@ export const useWebSocket = () => {
             return;
         }
 
+        // Close existing connection if any
+        if (socketRef.current) {
+            console.log('🧹 Closing existing WebSocket connection...');
+            socketRef.current.close();
+            socketRef.current = null;
+        }
+
         // Only connect if we're in the browser
         if (typeof window === 'undefined') {
             console.log('⚠️ Not in browser environment, skipping WebSocket connection');
@@ -43,10 +50,25 @@ export const useWebSocket = () => {
                 error: 'Connecting...'
             });
 
+            console.log('🔧 Creating new WebSocket instance...');
             socketRef.current = new WebSocket(wsUrl);
 
+            // Add timeout for connection
+            const connectionTimeout = setTimeout(() => {
+                if (socketRef.current && socketRef.current.readyState === WebSocket.CONNECTING) {
+                    console.log('⏰ WebSocket connection timeout');
+                    socketRef.current.close();
+                    setConnectionStatus({
+                        connected: false,
+                        error: 'Connection timeout'
+                    });
+                }
+            }, 10000); // 10 second timeout
+
             socketRef.current.onopen = () => {
+                clearTimeout(connectionTimeout);
                 console.log('✅ WebSocket connected successfully to:', wsUrl);
+                console.log('📊 WebSocket readyState:', socketRef.current?.readyState);
                 reconnectAttemptsRef.current = 0; // Reset reconnect attempts
                 setConnectionStatus({
                     connected: true,
@@ -55,6 +77,7 @@ export const useWebSocket = () => {
             };
 
             socketRef.current.onclose = (event) => {
+                clearTimeout(connectionTimeout);
                 console.log('❌ WebSocket disconnected:', {
                     code: event.code,
                     reason: event.reason,
@@ -85,10 +108,12 @@ export const useWebSocket = () => {
             };
 
             socketRef.current.onerror = (error) => {
+                clearTimeout(connectionTimeout);
                 console.error('❌ WebSocket connection error:', error);
+                console.log('📊 WebSocket readyState on error:', socketRef.current?.readyState);
                 setConnectionStatus({
                     connected: false,
-                    error: 'Connection failed - Backend mungkin belum berjalan'
+                    error: 'Connection failed - Check if backend is running'
                 });
             };
 
@@ -129,11 +154,13 @@ export const useWebSocket = () => {
                 }
             };
 
+            console.log('🎯 WebSocket instance created, waiting for connection...');
+
         } catch (error) {
             console.error('❌ Error creating WebSocket connection:', error);
             setConnectionStatus({
                 connected: false,
-                error: 'Failed to create connection'
+                error: 'Failed to create connection: ' + (error as Error).message
             });
         }
     }, [setConnectionStatus, setLatestResult]);
