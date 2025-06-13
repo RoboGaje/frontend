@@ -187,6 +187,14 @@ export const useWebSocket = () => {
     const sendFrame = useCallback((frameData: string) => {
         if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
             console.warn('⚠️ WebSocket not connected, cannot send frame');
+            console.log('📊 WebSocket state:', {
+                exists: !!socketRef.current,
+                readyState: socketRef.current?.readyState,
+                CONNECTING: WebSocket.CONNECTING,
+                OPEN: WebSocket.OPEN,
+                CLOSING: WebSocket.CLOSING,
+                CLOSED: WebSocket.CLOSED
+            });
             return false;
         }
 
@@ -206,10 +214,12 @@ export const useWebSocket = () => {
             console.log('📤 Sending frame for processing...', {
                 timestamp: message.data.timestamp,
                 settings: message.data.settings,
-                frameSize: frameData.length
+                frameSize: frameData.length,
+                framePreview: frameData.substring(0, 50) + '...'
             });
 
             socketRef.current.send(JSON.stringify(message));
+            console.log('✅ Frame message sent successfully');
             return true;
         } catch (error) {
             console.error('❌ Error sending frame:', error);
