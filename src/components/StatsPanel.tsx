@@ -365,6 +365,69 @@ export default function StatsPanel() {
                         >
                             🧪 Test Bbox
                         </button>
+                        <button
+                            onClick={() => {
+                                console.log('🧹 Clearing overlay canvas...');
+
+                                // Find and clear overlay canvas
+                                const canvases = document.querySelectorAll('canvas');
+                                canvases.forEach((canvas, index) => {
+                                    const ctx = canvas.getContext('2d');
+                                    if (ctx) {
+                                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                        console.log(`🧹 Cleared canvas ${index}`);
+                                    }
+                                });
+
+                                // Also clear store
+                                useDetectionStore.getState().reset();
+
+                                console.log('✅ All canvases cleared!');
+                            }}
+                            className="px-2 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
+                        >
+                            🧹 Clear Canvas
+                        </button>
+                        <button
+                            onClick={() => {
+                                console.log('👁️ Testing canvas visibility...');
+
+                                // Find overlay canvas and draw test rectangle
+                                const canvases = document.querySelectorAll('canvas');
+                                console.log(`Found ${canvases.length} canvas elements`);
+
+                                canvases.forEach((canvas, index) => {
+                                    const rect = canvas.getBoundingClientRect();
+                                    console.log(`Canvas ${index}:`, {
+                                        width: canvas.width,
+                                        height: canvas.height,
+                                        displaySize: { width: rect.width, height: rect.height },
+                                        position: { top: rect.top, left: rect.left },
+                                        zIndex: window.getComputedStyle(canvas).zIndex,
+                                        visibility: window.getComputedStyle(canvas).visibility,
+                                        display: window.getComputedStyle(canvas).display
+                                    });
+
+                                    const ctx = canvas.getContext('2d');
+                                    if (ctx) {
+                                        // Draw test rectangle
+                                        ctx.strokeStyle = 'red';
+                                        ctx.lineWidth = 5;
+                                        ctx.strokeRect(50, 50, 100, 100);
+
+                                        // Draw test text
+                                        ctx.fillStyle = 'yellow';
+                                        ctx.font = '20px Arial';
+                                        ctx.fillText(`Canvas ${index}`, 60, 80);
+
+                                        console.log(`✅ Drew test rectangle on canvas ${index}`);
+                                    }
+                                });
+                            }}
+                            className="px-2 py-1 bg-orange-500 text-white text-xs rounded hover:bg-orange-600"
+                        >
+                            👁️ Test Canvas
+                        </button>
                     </div>
                 </div>
             </div>

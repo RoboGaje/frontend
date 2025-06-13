@@ -58,16 +58,40 @@ function VideoFeedComponent() {
 
             clearOverlay();
 
-            // Draw faces (blue)
-            if (latestResult.faces && latestResult.faces.length > 0) {
-                console.log('🔵 Drawing faces:', latestResult.faces);
-                drawDetections(latestResult.faces, '#3B82F6');
-            }
+            // Draw both faces and bodies on the same canvas
+            const canvas = overlayCanvasRef.current;
+            const video = videoRef.current;
 
-            // Draw bodies (green)
-            if (latestResult.bodies && latestResult.bodies.length > 0) {
-                console.log('🟢 Drawing bodies:', latestResult.bodies);
-                drawDetections(latestResult.bodies, '#10B981');
+            if (canvas && video) {
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    // Set canvas size to match video display size
+                    const rect = video.getBoundingClientRect();
+                    canvas.width = rect.width;
+                    canvas.height = rect.height;
+
+                    console.log('🎨 Canvas setup for combined drawing:', {
+                        canvasSize: { width: canvas.width, height: canvas.height },
+                        videoSize: { width: video.videoWidth, height: video.videoHeight },
+                        displaySize: { width: rect.width, height: rect.height }
+                    });
+
+                    // Calculate scale factors
+                    const scaleX = rect.width / video.videoWidth;
+                    const scaleY = rect.height / video.videoHeight;
+
+                    // Draw bodies first (green, thicker lines)
+                    if (latestResult.bodies && latestResult.bodies.length > 0) {
+                        console.log('🟢 Drawing bodies:', latestResult.bodies);
+                        drawDetectionsOnCanvas(ctx, latestResult.bodies, '#10B981', scaleX, scaleY, 'BODY');
+                    }
+
+                    // Draw faces on top (blue, thinner lines)
+                    if (latestResult.faces && latestResult.faces.length > 0) {
+                        console.log('🔵 Drawing faces:', latestResult.faces);
+                        drawDetectionsOnCanvas(ctx, latestResult.faces, '#3B82F6', scaleX, scaleY, 'FACE');
+                    }
+                }
             }
 
             setIsProcessing(false);
@@ -76,59 +100,23 @@ function VideoFeedComponent() {
         }
     }, [latestResult, isMounted]);
 
-    // Draw detection overlays - improved version
-    const drawDetections = (detections: Detection[], color: string) => {
-        if (!isMounted) {
-            console.log('❌ Not mounted, skipping draw');
-            return;
-        }
-
-        const canvas = overlayCanvasRef.current;
-        const video = videoRef.current;
-
-        if (!canvas || !video) {
-            console.log('❌ Missing canvas or video element');
-            return;
-        }
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-            console.log('❌ Cannot get canvas context');
-            return;
-        }
-
-        // Set canvas size to match video display size
-        const rect = video.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
-
-        console.log('🎨 Canvas setup:', {
-            canvasSize: { width: canvas.width, height: canvas.height },
-            videoSize: { width: video.videoWidth, height: video.videoHeight },
-            displaySize: { width: rect.width, height: rect.height },
-            detectionsCount: detections.length
-        });
-
-        // Calculate scale factors
-        const scaleX = rect.width / video.videoWidth;
-        const scaleY = rect.height / video.videoHeight;
-
-        console.log('📏 Scale factors:', { scaleX, scaleY });
-
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 3; // Make lines thicker for visibility
-        ctx.font = '14px Arial';
-        ctx.fillStyle = color;
-
+    // New function to draw detections on a specific canvas context
+    const drawDetectionsOnCanvas = (
+        ctx: CanvasRenderingContext2D,
+        detections: Detection[],
+        color: string,
+        scaleX: number,
+        scaleY: number,
+        type: string
+    ) => {
         detections.forEach((detection, index) => {
-            console.log(`🎯 Drawing detection ${index}:`, detection);
+            console.log(`🎯 Drawing ${type} detection ${index}:`, detection);
 
             // Handle different bbox formats
             let bbox;
             if (Array.isArray(detection.bbox)) {
                 bbox = detection.bbox;
             } else if (detection.bbox && typeof detection.bbox === 'object') {
-                // Handle object format like {x1, y1, x2, y2}
                 bbox = [detection.bbox.x1, detection.bbox.y1, detection.bbox.x2, detection.bbox.y2];
             } else {
                 console.log('❌ Invalid bbox format:', detection.bbox);
@@ -152,33 +140,56 @@ function VideoFeedComponent() {
             const width = scaledX2 - scaledX1;
             const height = scaledY2 - scaledY1;
 
-            console.log(`📦 Bounding box ${index}:`, {
+            console.log(`📦 ${type} Bounding box ${index}:`, {
                 original: { x1, y1, x2, y2 },
                 scaled: { x1: scaledX1, y1: scaledY1, x2: scaledX2, y2: scaledY2 },
                 dimensions: { width, height }
             });
 
+            // Set different styles for face vs body
+            if (type === 'FACE') {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]); // Dashed line for faces
+            } else {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3;
+                ctx.setLineDash([]); // Solid line for bodies
+            }
+
             // Draw bounding box
             ctx.strokeRect(scaledX1, scaledY1, width, height);
 
-            // Draw label with class name if available
+            // Draw label with class name
             const baseLabel = detection.class_name || detection.class || detection.type || 'Detection';
             const confidence = detection.confidence || 0;
-            const label = `${baseLabel}: ${(confidence * 100).toFixed(1)}%`;
+            const label = `${type}: ${baseLabel} (${(confidence * 100).toFixed(1)}%)`;
+
+            ctx.font = '12px Arial';
             const textWidth = ctx.measureText(label).width;
+
+            // Position label differently for face vs body
+            const labelY = type === 'FACE' ? scaledY1 - 5 : scaledY2 + 15;
+            const labelBgY = type === 'FACE' ? scaledY1 - 20 : scaledY2 + 2;
 
             // Background for text
             ctx.fillStyle = color;
-            ctx.fillRect(scaledX1, scaledY1 - 25, textWidth + 8, 20);
+            ctx.fillRect(scaledX1, labelBgY, textWidth + 8, 18);
 
             // Text
             ctx.fillStyle = 'white';
-            ctx.fillText(label, scaledX1 + 4, scaledY1 - 8);
+            ctx.fillText(label, scaledX1 + 4, labelY);
 
-            console.log(`✅ Drew detection ${index} with label: ${label}`);
+            console.log(`✅ Drew ${type} detection ${index} with label: ${label}`);
         });
 
-        console.log(`🎨 Finished drawing ${detections.length} detections`);
+        console.log(`🎨 Finished drawing ${detections.length} ${type} detections`);
+    };
+
+    // Keep the old drawDetections function for compatibility but make it simpler
+    const drawDetections = (detections: Detection[], color: string) => {
+        // This function is now mainly for debugging - the main drawing happens in the useEffect above
+        console.log(`🔄 Legacy drawDetections called with ${detections.length} detections, color: ${color}`);
     };
 
     // Clear overlay canvas
@@ -372,6 +383,16 @@ function VideoFeedComponent() {
                 <canvas
                     ref={overlayCanvasRef}
                     className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                    style={{
+                        zIndex: 5,
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        pointerEvents: 'none',
+                        border: '1px solid rgba(255, 0, 0, 0.2)' // Debug border - remove later
+                    }}
                 />
 
                 {/* Hidden Canvas for Frame Capture */}
