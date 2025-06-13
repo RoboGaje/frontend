@@ -68,7 +68,7 @@ export default function Home() {
   }, []);
 
   if (!isMounted) {
-    return (
+  return (
       <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
         <div className="container mx-auto max-w-7xl">
           <header className="text-center mb-8">
@@ -150,8 +150,8 @@ export default function Home() {
         {/* Footer */}
         <footer className="text-center mt-8 text-gray-500">
           <p>Powered by YOLO v12 & Next.js</p>
-        </footer>
-      </div>
+      </footer>
+    </div>
     </main>
   );
 }

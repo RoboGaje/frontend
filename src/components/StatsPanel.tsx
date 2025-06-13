@@ -103,8 +103,8 @@ export default function StatsPanel() {
                     <button
                         onClick={handleTestConnection}
                         className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${connectionStatus.connected
-                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                            ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                            : 'bg-green-100 text-green-700 hover:bg-green-200'
                             }`}
                     >
                         {connectionStatus.connected ? '🔌 Test Disconnect' : '🔌 Test Connect'}
@@ -131,6 +131,186 @@ export default function StatsPanel() {
                     >
                         📊 Export Stats
                     </button>
+                </div>
+
+                {/* Debug Info */}
+                <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded mt-3">
+                    <div>🔍 Debug:</div>
+                    <div>Store Connected: {connectionStatus.connected ? '✅' : '❌'}</div>
+                    <div>Socket Connected: {isConnected() ? '✅' : '❌'}</div>
+                    <div>WebSocket URL: {process.env.NEXT_PUBLIC_WS_URL}</div>
+                    <div>Backend URL: {process.env.NEXT_PUBLIC_BACKEND_URL}</div>
+                    <div>Current Host: {typeof window !== 'undefined' ? window.location.host : 'unknown'}</div>
+
+                    {/* Manual Connection Test */}
+                    <div className="mt-2 flex gap-2 flex-wrap">
+                        <button
+                            onClick={() => {
+                                console.log('🔄 Manual WebSocket connection test...');
+                                connect();
+                            }}
+                            className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                        >
+                            🔄 Test Connect
+                        </button>
+                        <button
+                            onClick={() => {
+                                console.log('🧪 Testing backend API...');
+                                fetch((process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000') + '/api/models/info')
+                                    .then(res => res.json())
+                                    .then(data => console.log('✅ Backend API response:', data))
+                                    .catch(err => console.error('❌ Backend API error:', err));
+                            }}
+                            className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600"
+                        >
+                            🧪 Test API
+                        </button>
+                        <button
+                            onClick={() => {
+                                console.log('🔄 Force refresh page...');
+                                window.location.reload();
+                            }}
+                            className="px-2 py-1 bg-orange-500 text-white text-xs rounded hover:bg-orange-600"
+                        >
+                            🔄 Refresh
+                        </button>
+                        <button
+                            onClick={() => {
+                                console.log('🎬 Manual frame processing test...');
+                                // Get video element and try to capture frame
+                                const videoElements = document.querySelectorAll('video');
+                                if (videoElements.length > 0) {
+                                    const video = videoElements[0] as HTMLVideoElement;
+                                    console.log('📹 Video found:', {
+                                        readyState: video.readyState,
+                                        videoWidth: video.videoWidth,
+                                        videoHeight: video.videoHeight,
+                                        currentTime: video.currentTime
+                                    });
+
+                                    // Try to capture frame manually
+                                    const canvas = document.createElement('canvas');
+                                    canvas.width = video.videoWidth;
+                                    canvas.height = video.videoHeight;
+                                    const ctx = canvas.getContext('2d');
+                                    if (ctx) {
+                                        ctx.drawImage(video, 0, 0);
+                                        const frameData = canvas.toDataURL('image/jpeg', 0.8);
+                                        console.log('📸 Manual frame captured, size:', frameData.length);
+
+                                        // Send frame via WebSocket using the hook
+                                        console.log('📡 Sending frame via WebSocket...');
+                                        const success = sendFrame(frameData);
+                                        console.log('📡 Frame send result:', success);
+
+                                        if (success) {
+                                            console.log('✅ Frame sent successfully!');
+                                        } else {
+                                            console.log('❌ Failed to send frame');
+                                        }
+                                    }
+                                } else {
+                                    console.log('❌ No video element found');
+                                }
+                            }}
+                            className="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600"
+                        >
+                            🎬 Test Frame
+                        </button>
+                        <button
+                            onClick={() => {
+                                console.log('🚀 Force start frame processing...');
+                                // Trigger frame processing manually
+                                const videoElements = document.querySelectorAll('video');
+                                if (videoElements.length > 0) {
+                                    const video = videoElements[0] as HTMLVideoElement;
+                                    if (video.readyState === 4) { // HAVE_ENOUGH_DATA
+                                        console.log('🎯 Starting continuous frame processing...');
+
+                                        const processInterval = setInterval(() => {
+                                            const canvas = document.createElement('canvas');
+                                            canvas.width = video.videoWidth;
+                                            canvas.height = video.videoHeight;
+                                            const ctx = canvas.getContext('2d');
+                                            if (ctx) {
+                                                ctx.drawImage(video, 0, 0);
+                                                const frameData = canvas.toDataURL('image/jpeg', 0.8);
+                                                const success = sendFrame(frameData);
+                                                console.log('🔄 Auto frame sent:', success);
+                                            }
+                                        }, 1000); // 1 FPS for testing
+
+                                        // Stop after 10 seconds
+                                        setTimeout(() => {
+                                            clearInterval(processInterval);
+                                            console.log('⏹️ Stopped auto frame processing');
+                                        }, 10000);
+                                    }
+                                }
+                            }}
+                            className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+                        >
+                            🚀 Auto Process
+                        </button>
+                        <button
+                            onClick={() => {
+                                console.log('🔍 Testing with very low face confidence threshold...');
+                                // Get video element and try to capture frame
+                                const videoElements = document.querySelectorAll('video');
+                                if (videoElements.length > 0) {
+                                    const video = videoElements[0] as HTMLVideoElement;
+                                    console.log('📹 Video found:', {
+                                        readyState: video.readyState,
+                                        videoWidth: video.videoWidth,
+                                        videoHeight: video.videoHeight,
+                                        currentTime: video.currentTime
+                                    });
+
+                                    // Try to capture frame manually
+                                    const canvas = document.createElement('canvas');
+                                    canvas.width = video.videoWidth;
+                                    canvas.height = video.videoHeight;
+                                    const ctx = canvas.getContext('2d');
+                                    if (ctx) {
+                                        ctx.drawImage(video, 0, 0);
+                                        const frameData = canvas.toDataURL('image/jpeg', 0.8);
+                                        console.log('📸 Manual frame captured, size:', frameData.length);
+
+                                        // Send frame with very low face confidence threshold
+                                        console.log('📡 Sending frame with VERY LOW face confidence threshold (0.1)...');
+
+                                        // Temporarily update settings to use very low face confidence
+                                        const originalSettings = { ...settings };
+                                        updateSettings({
+                                            face_confidence_threshold: 0.1,  // Very low for face
+                                            body_confidence_threshold: settings.body_confidence_threshold  // Keep body as is
+                                        });
+
+                                        // Send frame using the hook
+                                        const success = sendFrame(frameData);
+                                        console.log('📡 Low face confidence frame send result:', success);
+
+                                        // Restore original settings after a delay
+                                        setTimeout(() => {
+                                            updateSettings(originalSettings);
+                                            console.log('⚙️ Settings restored to original values');
+                                        }, 2000);
+
+                                        if (success) {
+                                            console.log('✅ Low face confidence frame sent successfully!');
+                                        } else {
+                                            console.log('❌ Failed to send low face confidence frame');
+                                        }
+                                    }
+                                } else {
+                                    console.log('❌ No video element found');
+                                }
+                            }}
+                            className="px-2 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600"
+                        >
+                            🔍 Low Face Conf
+                        </button>
+                    </div>
                 </div>
             </div>
 
